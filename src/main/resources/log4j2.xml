@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN" monitorInterval="30">
+    <Properties>
+        <Property name="LOG_PATTERN">%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</Property>
+        <Property name="SERVICE_NAME">hw2</Property>
+        <Property name="SERVICE_VERSION">0.0.1</Property>
+    </Properties>
+
+    <Appenders>
+        <!-- Console Appender для разработки -->
+        <Console name="Console" target="SYSTEM_OUT">
+            <PatternLayout pattern="${LOG_PATTERN}"/>
+        </Console>
+
+        <!-- JSON Appender для production -->
+        <Console name="JsonConsole" target="SYSTEM_OUT">
+            <JsonTemplateLayout eventTemplateUri="classpath:LogstashJsonEventLayoutV1.json"/>
+        </Console>
+
+        <!-- File Appender -->
+        <RollingFile name="FileAppender"
+                     fileName="logs/app.log"
+                     filePattern="logs/app-%d{yyyy-MM-dd}-%i.log.gz">
+            <PatternLayout pattern="${LOG_PATTERN}"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy />
+                <SizeBasedTriggeringPolicy size="100 MB"/>
+            </Policies>
+        </RollingFile>
+
+        <!-- Async Appender для повышения производительности -->
+        <Async name="AsyncFile" bufferSize="512">
+            <AppenderRef ref="FileAppender"/>
+        </Async>
+    </Appenders>
+
+    <Loggers>
+        <!-- Application logs -->
+        <Logger name="ture.app" level="DEBUG" additivity="false">
+            <AppenderRef ref="Console" level="DEBUG"/>
+            <AppenderRef ref="AsyncFile" level="INFO"/>
+        </Logger>
+
+        <!-- SQL logs -->
+        <Logger name="org.hibernate.SQL" level="DEBUG" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <Logger name="org.hibernate.type.descriptor.sql.BasicBinder" level="TRACE" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <!-- Spring logs -->
+        <Logger name="org.springframework" level="INFO" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="AsyncFile"/>
+        </Logger>
+
+        <!-- Root logger -->
+        <Root level="INFO">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="AsyncFile"/>
+        </Root>
+    </Loggers>
+</Configuration>
