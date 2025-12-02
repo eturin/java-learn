@@ -8,6 +8,8 @@ import ture.app.entity.Account;
 import ture.app.repository.AccountRepository;
 import ture.app.repository.UserRepository;
 
+import java.util.Optional;
+
 // Создаем класс AccountService, который будет содержать основную логику работы со счетами.
 // Для чего это нужно:
 // - Service слой содержит бизнес-логику приложения
@@ -31,6 +33,11 @@ public class AccountService {
 
         var account = new Account(usr.get(), name);
         return accountRepository.save(account);
+    }
+    // получение счета по ID
+    public Optional<Account> getById(Long id) {
+        logger.info(String.format("Retrieving account with id '%s'", id));
+        return accountRepository.findById(id);
     }
     // получение остатка по счёту
     public String getAmount(Long accountId) {

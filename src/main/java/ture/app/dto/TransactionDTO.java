@@ -1,12 +1,17 @@
 package ture.app.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import ture.app.entity.Transaction;
 
 import java.time.LocalDateTime;
 
 public class TransactionDTO {
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     private Long id;
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     private LocalDateTime createdAt;
+
     private AccountDTO from_acc;
     private AccountDTO to_acc;
     private String amount;
