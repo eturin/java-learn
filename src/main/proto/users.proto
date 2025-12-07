@@ -26,43 +26,49 @@ message Users {
   string error_message = 3;      // Сообщение об ошибки
 }
 // ответ со сведениями о пользователе
+message UserResp {
+  Status status = 1;             // Статус
+  oneof resp {
+    User user = 2;               // Сведения о пользователе
+    string error_message = 3;    // Сообщение об ошибки
+  }
+}
 message User {
   int64 id = 1;                  // ID пользователя
   string name = 2;               // Имя пользователя
   string email = 3;              // Email
   string created_at = 4;         // Дата создания
   repeated Account accounts = 5; // Счета
-  oneof optional_status {
-    Status status = 6;           // Статус
-  }
-  oneof optional_error {
-    string error_message = 7;    // Сообщение об ошибки
-  }
 }
 // ответ со сведениями обо всех счетах пользователя
 message Accounts {
-  int64 user_id = 1;             // ID пользователя
-  repeated Account accounts = 2; // Счета
-  Status status = 3;             // Статус
-  string error_message = 4;      // Сообщение об ошибки
+  Status status = 1;             // Статус
+  int64 user_id = 2;             // ID пользователя
+  oneof resp {
+    AccountsList accounts = 3;   // Счета
+    string error_message = 4;    // Сообщение об ошибки
+  }
 }
 // ответ со сведениями о счёте
+message AccountResp {
+  Status status = 1;        // Статус
+  oneof resp {
+    Account account = 2;      // Сведения о счёте
+    string error_message = 3; // Сообщение об ошибки
+  }
+}
+message AccountsList {
+  int64 user_id = 1;             // ID пользователя
+  repeated Account accounts = 2; // Счета
+}
 message Account {
   int64 id = 1;             // ID счёта
-  oneof optional_user {
-    int64 user_id = 2;      // ID пользователя
-  }
+  int64 user_id = 2;      // ID пользователя
   string name = 3;          // Наименование счёта
   string amount = 4;        // Остаток
   string created_at = 5;    // Дата создания
   string blocked_at = 6;    // Дата блокировки
   string closed_at = 7;     // Дата закрытия
-  oneof optional_status {
-    Status status = 8;        // Статус
-  }
-  oneof optional_error {
-    string error_message = 9; // Сообщение об ошибки
-  }
 }
 
 enum Status {
