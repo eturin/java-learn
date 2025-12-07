@@ -1,0 +1,38 @@
+// ./gradlew generateProto
+
+syntax = "proto3";
+
+package payments;
+
+option java_package = "ture.app.transactions";
+option java_multiple_files = true;
+
+// Запрос на создание платежа
+message PaymentRequest {
+  int64 from_account_id = 1; // ID счёта отправителя
+  int64 to_account_id = 2;   // ID счёта получателя
+  string amount = 3;          // Сумма
+}
+
+// Ответ об успешном платеже
+message PaymentResponse {
+  int64 id = 1;              // ID успешной транзакции
+  int64 from_account_id = 2; // ID счёта отправителя
+  int64 to_account_id = 3;   // ID счёта получателя
+  string amount = 4;          // Сумма
+  PaymentStatus status = 5;   // Статус платежа
+  string created_at = 6;      // Дата создания
+  string error_message = 7;   // Сообщение об ошибке
+}
+
+// Статусы платежа
+enum PaymentStatus {
+  COMPLETED = 0;
+  FAILED = 1;
+}
+
+// Сервис для работы с платежами
+service TransactionsService {
+  // Один запрос, один ответ
+  rpc ProcessPayment(PaymentRequest) returns (PaymentResponse) {};
+}
