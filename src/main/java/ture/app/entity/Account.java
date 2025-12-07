@@ -101,8 +101,8 @@ public class Account {
                 ", amount=" + amount +
                 ", name='" + name + '\'' +
                 ", createdAt=" + createdAt +
-                ", createdAt=" + blockedAt +
-                ", createdAt=" + closedAt +
+                ", blockedAt=" + blockedAt +
+                ", closedAt=" + closedAt +
                 '}';
     }
 }

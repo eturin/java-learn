@@ -23,6 +23,9 @@ def combine_text_files(directory, output_file, file_extension="*.*"):
 
     with open(output_file, 'w', encoding='utf-8') as outfile:
         for file_path in text_files:
+            if "build/" in file_path: continue
+            if "logs/" in file_path: continue
+
             try:
                 with open(file_path, 'r', encoding='utf-8') as infile:
                     # Добавляем разделитель с именем файла

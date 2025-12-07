@@ -1,0 +1,71 @@
+// ./gradlew generateProto
+
+syntax = "proto3";
+
+package users;
+
+option java_package = "ture.app.users";
+option java_multiple_files = true;
+
+// запрос получения всех пользователей
+// запрос получения пользователя по ID
+// запрос получения пользователя по имени
+// запрос получения пользователя по email
+// запрос создания нового пользователя
+// запрос обновления имени пользователя
+// запрос обновления email пользователя
+// запрос удаления пользователя
+// запрос получения счетов пользователя
+// запрос изменения названия счёта
+// запрос создания нового счёта
+
+// ответ со сведениями обо всех пользователях
+message Users {
+  repeated User users = 1;       // Пользователи
+  Status status = 2;             // Статус
+  string error_message = 3;      // Сообщение об ошибки
+}
+// ответ со сведениями о пользователе
+message User {
+  int64 id = 1;                  // ID пользователя
+  string name = 2;               // Имя пользователя
+  string email = 3;              // Email
+  string created_at = 4;         // Дата создания
+  repeated Account accounts = 5; // Счета
+  oneof optional_status {
+    Status status = 6;           // Статус
+  }
+  oneof optional_error {
+    string error_message = 7;    // Сообщение об ошибки
+  }
+}
+// ответ со сведениями обо всех счетах пользователя
+message Accounts {
+  int64 user_id = 1;             // ID пользователя
+  repeated Account accounts = 2; // Счета
+  Status status = 3;             // Статус
+  string error_message = 4;      // Сообщение об ошибки
+}
+// ответ со сведениями о счёте
+message Account {
+  int64 id = 1;             // ID счёта
+  oneof optional_user {
+    int64 user_id = 2;      // ID пользователя
+  }
+  string name = 3;          // Наименование счёта
+  string amount = 4;        // Остаток
+  string created_at = 5;    // Дата создания
+  string blocked_at = 6;    // Дата блокировки
+  string closed_at = 7;     // Дата закрытия
+  oneof optional_status {
+    Status status = 8;        // Статус
+  }
+  oneof optional_error {
+    string error_message = 9; // Сообщение об ошибки
+  }
+}
+
+enum Status {
+  SUCCESS = 0;
+  FAILED = 1;
+}
