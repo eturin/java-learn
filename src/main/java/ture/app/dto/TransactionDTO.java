@@ -2,6 +2,7 @@ package ture.app.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Pattern;
 import ture.app.entity.Transaction;
 
 import java.time.LocalDateTime;
@@ -23,6 +24,7 @@ public class TransactionDTO {
     private AccountDTO to_acc;
     @Schema(description = "Сумма",
             example = "1234.45")
+    @Pattern(regexp = "^\\d+\\.\\d{2}$", message = "Amount must be in format 123.45")
     private String amount;
 
     public TransactionDTO() {}

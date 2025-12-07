@@ -55,7 +55,7 @@ public class AccountService {
         if(account.isEmpty()) throw new RuntimeException("Account not found");
 
         var acc = account.get();
-        if(acc.getUser().getId() == usrId) acc.setName(name);
+        if(acc.getUser().getId().equals(usrId)) acc.setName(name);
         else throw new RuntimeException("Account is not your");
         accountRepository.save(acc);
         return true;

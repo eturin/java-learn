@@ -87,7 +87,6 @@ public class PaymentsController {
         AccountDTO from_acc_ = transactionDTO.getFrom_acc();
         Account from_acc = accountService.getById(from_acc_.getId()).orElse(null);
 
-
         AccountDTO to_acc_ = transactionDTO.getTo_acc();
         Account to_acc = accountService.getById(to_acc_.getId()).orElse(null);
 

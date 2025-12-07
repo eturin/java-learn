@@ -35,10 +35,21 @@ public class TransactionService {
     @Autowired
     private AccountRepository accountRepository;
 
-    // создание перевода
+    @Transactional
+    public Transaction create(Long fromAccID, Long toAccID, Integer amount) {
+        var from_acc = accountRepository.findById(fromAccID);
+        var to_acc =   accountRepository.findById(toAccID);
+        if(from_acc.isEmpty())
+            throw new RuntimeException("From Account cannot be null");
+        if(to_acc.isEmpty())
+            throw new RuntimeException("To Account cannot be null");
+
+        return create(from_acc.get(), to_acc.get(), amount);
+    }
+        // создание перевода
     @Transactional
     public Transaction create(Account from_acc, Account to_acc, Integer amount) {
-        logger.info(String.format("Creating transaction: %s -> %s = %.2f", from_acc, to_acc, amount/100.0));
+        logger.info(String.format("Creating transaction: %s -> %s = %.2f", from_acc.getId(), to_acc.getId(), amount/100.0));
         if(amount <= 0)
             throw new RuntimeException("Amount must be greater than zero");
         if(from_acc == null)
@@ -75,6 +86,11 @@ public class TransactionService {
 
         //пишем лог операций
         var transaction = new Transaction(from_acc, to_acc, amount);
-        return transactionRepository.save(transaction);
+        transaction = transactionRepository.save(transaction);
+
+        // Обновляем объект из БД, чтобы получить created_at
+        entityManager.refresh(transaction);
+
+        return transaction;
     }
 }

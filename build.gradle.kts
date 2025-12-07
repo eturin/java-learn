@@ -2,6 +2,7 @@ plugins {
     java
     id("org.springframework.boot") version "3.5.8"
     id("io.spring.dependency-management") version "1.1.7"
+    id("com.google.protobuf") version "0.9.4"
 }
 
 group = "ture"
@@ -60,8 +61,66 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-actuator")
 
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.5")
+
+    // === gRPC зависимости ===
+    implementation("net.devh:grpc-spring-boot-starter:2.15.0.RELEASE")
+
+    implementation("io.grpc:grpc-netty:1.62.2")
+    implementation("io.grpc:grpc-protobuf:1.62.2")
+    implementation("io.grpc:grpc-stub:1.62.2")
+    implementation("com.google.protobuf:protobuf-java-util:3.25.3")
+
+    // Для работы с рефлексией (нужно для grpcurl и тестирования)
+    implementation("io.grpc:grpc-services:1.62.2") // reflection service
+
+    compileOnly("org.apache.tomcat:annotations-api:6.0.53") // для @Generated
 }
 
+// === Конфигурация protobuf плагина ===
+protobuf {
+    protoc {
+        // Указываем путь к protoc
+        artifact = "com.google.protobuf:protoc:3.25.3"
+    }
+
+    plugins {
+        // Правильный синтаксис для Kotlin DSL
+        create("grpc") {
+            artifact = "io.grpc:protoc-gen-grpc-java:1.62.2"
+        }
+    }
+
+    generateProtoTasks {
+        // Для всех задач генерации
+        all().forEach { task ->
+            // Добавляем плагин grpc
+            task.plugins {
+                create("grpc")
+            }
+        }
+    }
+}
+
+// === Настройка sourceSets ===
+sourceSets {
+    main {
+        java {
+            srcDirs(
+                "src/main/java",
+                "build/generated/source/proto/main/java",
+                "build/generated/source/proto/main/grpc"
+            )
+        }
+    }
+}
+
+// === Очистка сгенерированных файлов ===
+tasks {
+    clean {
+        delete.add("build/generated")
+    }
+}
 tasks.withType<Test> {
     useJUnitPlatform()
 }
+
