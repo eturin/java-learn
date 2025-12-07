@@ -1,19 +1,28 @@
 package ture.app.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import io.swagger.v3.oas.annotations.media.Schema;
 import ture.app.entity.Transaction;
 
 import java.time.LocalDateTime;
-
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class TransactionDTO {
+    @Schema(description = "Идентификатор",
+            example = "123456789",
+            accessMode = Schema.AccessMode.READ_ONLY)
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private Long id;
 
+    @Schema(description = "Дата создания",
+            example = "2025-12-07T08:08:20.976Z",
+            accessMode = Schema.AccessMode.READ_ONLY)
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private LocalDateTime createdAt;
 
     private AccountDTO from_acc;
     private AccountDTO to_acc;
+    @Schema(description = "Сумма",
+            example = "1234.45")
     private String amount;
 
     public TransactionDTO() {}

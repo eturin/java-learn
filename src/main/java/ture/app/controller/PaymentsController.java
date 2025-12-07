@@ -1,5 +1,11 @@
 package ture.app.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.RequestEntity;
@@ -18,6 +24,11 @@ import ture.app.service.UserService;
 
 import java.math.BigDecimal;
 
+//  Swagger UI (интерактивный интерфейс) будет доступен по адресу:
+//  http://localhost:8080/swagger-ui.html
+//
+//  OpenAPI JSON (спецификация в сыром виде) будет доступен по адресу:
+//  http://localhost:8080/v3/api-docs
 @RestController
 @RequestMapping("/api/payments")
 @Tag(name = "Платежи и переводы", description = "API для работы с платежами и переводами")
@@ -31,6 +42,15 @@ public class PaymentsController {
     @Autowired
     private TransactionService transactionService;
 
+    /**
+     * Конвертирует строковую сумму в целое число (копейки/центы)
+     * @param amount Строковое представление суммы
+     * @return Сумма в минимальных единицах (копейках/центах)
+     * curl -X 'POST' 'http://localhost:8080/api/payments' -H 'accept: application/json' -H 'Content-Type: application/json' -d '{"from_acc": {"id": 2},"to_acc": {"id": 1},"amount": "1.00"}'
+     **/
+    @Operation(summary = "Конвертация суммы",
+            description = "Преобразует строковую сумму с плавающей точкой в целое число (копейки)",
+            hidden = true) // Скрываем этот метод из документации API, так как он внутренний
     public Integer convertToInteger(String amount) {
         // Убираем возможные пробелы
         String cleaned = amount.trim();
@@ -43,16 +63,40 @@ public class PaymentsController {
     }
 
     @PostMapping
-    public ResponseEntity<TransactionDTO> paymant(@RequestBody TransactionDTO transactionDTO) {
+    @Operation(summary = "Создание платежа/перевода",
+            description = "Выполняет перевод средств между счетами")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200",
+                    description = "Платеж успешно выполнен",
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(implementation = TransactionDTO.class))),
+            @ApiResponse(responseCode = "400",
+                    description = "Неверный запрос или недостаточно средств"),
+            @ApiResponse(responseCode = "404",
+                    description = "Один из счетов не найден"),
+            @ApiResponse(responseCode = "500",
+                    description = "Внутренняя ошибка сервера")
+    })
+    public ResponseEntity<TransactionDTO> payment(
+            @Parameter(description = "Данные для выполнения перевода",
+                    required = true,
+                    schema = @Schema(implementation = TransactionDTO.class))
+            @RequestBody TransactionDTO transactionDTO) {
+
+
         AccountDTO from_acc_ = transactionDTO.getFrom_acc();
         Account from_acc = accountService.getById(from_acc_.getId()).orElse(null);
 
-        AccountDTO to_acc_   = transactionDTO.getTo_acc();
-        Account to_acc = accountService.getById(from_acc_.getId()).orElse(null);
+
+        AccountDTO to_acc_ = transactionDTO.getTo_acc();
+        Account to_acc = accountService.getById(to_acc_.getId()).orElse(null);
 
         var amount = convertToInteger(transactionDTO.getAmount());
 
         var tran = transactionService.create(from_acc, to_acc, amount);
-        return ResponseEntity.ok(new TransactionDTO(tran));
+        var tranDTO = new TransactionDTO(tran);
+        tranDTO.getTo_acc().Clear();
+        return ResponseEntity.ok(tranDTO);
+
     }
 }

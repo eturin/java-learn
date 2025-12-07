@@ -1,16 +1,37 @@
 package ture.app.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import io.swagger.v3.oas.annotations.media.Schema;
 import ture.app.entity.Account;
 
 import java.time.LocalDateTime;
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class AccountDTO {
     private Long id;
+    @Schema(description = "Наименоване",
+            example = "2025-12-07T08:08:20.976Z",
+            accessMode = Schema.AccessMode.READ_ONLY)
     private String name;
+    @Schema(description = "Сумма",
+            example = "123.45",
+            accessMode = Schema.AccessMode.READ_ONLY)
     private String amount;
+    @Schema(description = "Идентификатор владелеца счета",
+            example = "123456789",
+            accessMode = Schema.AccessMode.READ_ONLY)
     private Long userId;
+    @Schema(description = "Дата создания",
+            example = "2025-12-07T08:08:20.976Z",
+            accessMode = Schema.AccessMode.READ_ONLY)
     private LocalDateTime createdAt;
+    @Schema(description = "Дата блокировки",
+            example = "2025-12-07T08:08:20.976Z",
+            accessMode = Schema.AccessMode.READ_ONLY)
     private LocalDateTime blockedAt;
+    @Schema(description = "Дата закрытия",
+            example = "2025-12-07T08:08:20.976Z",
+            accessMode = Schema.AccessMode.READ_ONLY)
     private LocalDateTime closedAt;
 
     public AccountDTO() {}
@@ -25,6 +46,7 @@ public class AccountDTO {
         this.name = name;
         this.amount = String.format("%.2f", amount/100.0);
         this.userId = userId;
+
         this.createdAt = createdAt;
         this.blockedAt = blockedAt;
         this.closedAt = closedAt;
@@ -94,5 +116,12 @@ public class AccountDTO {
 
     public LocalDateTime getClosedAt() {
         return closedAt;
+    }
+
+    public void Clear() {
+        this.createdAt = null;
+        this.blockedAt = null;
+        this.closedAt = null;
+        this.amount = null;
     }
 }

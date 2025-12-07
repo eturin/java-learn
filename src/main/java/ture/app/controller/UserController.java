@@ -1,6 +1,7 @@
 package ture.app.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -42,9 +43,17 @@ public class UserController {
 
     // GET /api/users - получить всех пользователей
     // curl http://127.0.0.1:8080/api/users
-    @Operation(summary = "Получить всех пользователей", description = "Возвращает список всех зарегистрированных пользователей системы.")
+    @Operation(
+            summary = "Получить всех пользователей",
+            description = "Возвращает список всех зарегистрированных пользователей системы."
+    )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Успешный запрос")
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Успешный запрос",
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(implementation = UserDTO.class))
+            )
     })
     @GetMapping
     public List<UserDTO> getAllUsers() {
@@ -53,51 +62,96 @@ public class UserController {
 
     // GET /api/users/{id} - получить пользователя по ID
     // curl http://127.0.0.1:8080/api/users/1
-    @Operation(summary = "Получить пользователя по ID", description = "Ищет и возвращает данные пользователя по его уникальному идентификатору.")
+    @Operation(
+            summary = "Получить пользователя по ID",
+            description = "Ищет и возвращает данные пользователя по его уникальному идентификатору."
+    )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Пользователь найден"),
-            @ApiResponse(responseCode = "404", description = "Пользователь с указанным ID не найден")
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Пользователь найден",
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(implementation = UserDTO.class))
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Пользователь с указанным ID не найден",
+                    content = @Content
+            )
     })
     @GetMapping("/{id}")
-    public ResponseEntity<UserDTO> getUser(@PathVariable Long id) {
+    public ResponseEntity<UserDTO> getUser(
+            @Parameter(description = "ID пользователя", required = true, example = "1")
+            @PathVariable Long id
+    ) {
         Optional<User> user = userService.getUserById(id);
         return user.map(UserDTO::new)
-                   .map(ResponseEntity::ok)
-                   .orElse(ResponseEntity.notFound().build());
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
     // GET /api/users/by-name/{name} - получить пользователя по имени
     // curl http://127.0.0.1:8080/api/users/by-name/ture
-    @Operation(summary = "Получить пользователя по имени", description = "Ищет и возвращает данные пользователя по его имени.")
+    @Operation(
+            summary = "Получить пользователя по имени",
+            description = "Ищет и возвращает данные пользователя по его имени."
+    )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Пользователь найден"),
-            @ApiResponse(responseCode = "404", description = "Пользователь с указанным имененм не найден")
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Пользователь найден",
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(implementation = UserDTO.class))
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Пользователь с указанным именем не найден",
+                    content = @Content
+            )
     })
     @GetMapping("/by-name/{name}")
-    public ResponseEntity<UserDTO> getUserByName(@PathVariable String name) {
+    public ResponseEntity<UserDTO> getUserByName(
+            @Parameter(description = "Имя пользователя", required = true, example = "ture")
+            @PathVariable String name
+    ) {
         Optional<User> user = userService.getUserByName(name);
         return user.map(UserDTO::new)
-                   .map(ResponseEntity::ok)
-                   .orElse(ResponseEntity.notFound().build());
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
     // GET /api/users/by-email/{email} - получить пользователя по email
     // curl http://127.0.0.1:8080/api/users/by-email/eturin@gmail.com
-    @Operation(summary = "Получить пользователя по email", description = "Ищет и возвращает данные пользователя по его электронной почте.")
+    @Operation(
+            summary = "Получить пользователя по email",
+            description = "Ищет и возвращает данные пользователя по его электронной почте."
+    )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Пользователь найден"),
-            @ApiResponse(responseCode = "404", description = "Пользователь с указанной электронной почтой не найден")
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Пользователь найден",
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(implementation = UserDTO.class))
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Пользователь с указанной электронной почтой не найден",
+                    content = @Content
+            )
     })
     @GetMapping("/by-email/{email}")
-    public ResponseEntity<UserDTO> getUserByEmail(@PathVariable String email) {
+    public ResponseEntity<UserDTO> getUserByEmail(
+            @Parameter(description = "Email пользователя", required = true, example = "eturin@gmail.com")
+            @PathVariable String email
+    ) {
         Optional<User> user = userService.getUserByEmail(email);
         return user.map(UserDTO::new)
-                   .map(ResponseEntity::ok)
-                   .orElse(ResponseEntity.notFound().build());
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
     // POST /api/users - создать нового пользователя
-    // curl -X POST http://localhost:8080/api/users   -H "Content-Type: application/json"  -d '{"name":"ture","email":"eturin@gmail.com"}'
+    // curl -X POST http://localhost:8080/api/users -H "Content-Type: application/json" -d '{"name":"ture","email":"eturin@gmail.com"}'
     @Operation(
             summary = "Создать нового пользователя",
             description = "Создает нового пользователя с указанными именем и email"
@@ -106,7 +160,8 @@ public class UserController {
             @ApiResponse(
                     responseCode = "200",
                     description = "Пользователь успешно создан",
-                    content = @Content(schema = @Schema(implementation = UserDTO.class))
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(implementation = UserDTO.class))
             ),
             @ApiResponse(
                     responseCode = "400",
@@ -114,34 +169,78 @@ public class UserController {
             )
     })
     @PostMapping
-    public ResponseEntity<UserDTO> createUser(@io.swagger.v3.oas.annotations.parameters.RequestBody(
-            description = "Данные для создания пользователя",
-            required = true,
-            content = @Content(
-                    mediaType = "application/json",
-                    schema = @Schema(
-                            description = "Объект пользователя",
-                            requiredProperties = {"name", "email"},
-                            example = """
-                    {
-                      "name": "ture",
-                      "email": "eturin@gmail.com"
-                    }
-                    """
+    public ResponseEntity<UserDTO> createUser(
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    description = "Данные для создания пользователя",
+                    required = true,
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(
+                                    description = "Объект пользователя",
+                                    requiredProperties = {"name", "email"},
+                                    example = """
+                        {
+                          "name": "ture",
+                          "email": "eturin@gmail.com"
+                        }
+                        """
+                            )
                     )
             )
-    ) @RequestBody User user) {
+            @RequestBody User user
+    ) {
         var usr = userService.createUser(user.getName(), user.getEmail());
-        return  ResponseEntity.ok(new UserDTO(usr));
+        return ResponseEntity.ok(new UserDTO(usr));
     }
 
     // PUT /api/users/{id}/name - обновить имя пользователя
-    // curl -X PUT http://localhost:8080/api/users/2/name   -H "Content-Type: application/json"  -d 'Бла-бла'
+    // curl -X PUT http://localhost:8080/api/users/2/name -H "Content-Type: application/json" -d 'Бла-бла'
+    @Operation(
+            summary = "Обновить имя пользователя",
+            description = "Обновляет имя пользователя по указанному ID"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Имя пользователя успешно обновлено",
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(implementation = UserDTO.class))
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Некорректные данные"
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Пользователь не найден"
+            )
+    })
     @PutMapping("/{id}/name")
-    public ResponseEntity<UserDTO> updateUserName(@PathVariable Long id, @RequestBody User user) {
-        if ( !user.getName().isEmpty()) {
+    public ResponseEntity<UserDTO> updateUserName(
+            @Parameter(description = "ID пользователя", required = true, example = "1")
+            @PathVariable Long id,
+
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    description = "Новое имя пользователя",
+                    required = true,
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(
+                                    description = "Объект пользователя с новым именем",
+                                    requiredProperties = {"name"},
+                                    example = """
+                        {
+                          "name": "Новое имя"
+                        }
+                        """
+                            )
+                    )
+            )
+            @RequestBody User user
+    ) {
+        if (!user.getName().isEmpty()) {
             var u = userService.updateUser(id, user.getName());
-            if(u != null) {
+            if (u != null) {
                 return ResponseEntity.ok(new UserDTO(u));
             }
         }
@@ -149,12 +248,53 @@ public class UserController {
     }
 
     // PUT /api/users/{id}/email - обновить email пользователя
-    // curl -X POST http://localhost:8080/api/users/2/email   -H "Content-Type: application/json"  -d 'Бла@бла.БЛА'
+    // curl -X POST http://localhost:8080/api/users/2/email -H "Content-Type: application/json" -d 'Бла@бла.БЛА'
+    @Operation(
+            summary = "Обновить email пользователя",
+            description = "Обновляет email пользователя по указанному ID"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Email пользователя успешно обновлен",
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(implementation = UserDTO.class))
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Некорректный email"
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Пользователь не найден"
+            )
+    })
     @PutMapping("/{id}/email")
-    public ResponseEntity<UserDTO> updateUserEmail(@PathVariable Long id, @RequestBody User user) {
-        if ( !user.getName().isEmpty()) {
+    public ResponseEntity<UserDTO> updateUserEmail(
+            @Parameter(description = "ID пользователя", required = true, example = "1")
+            @PathVariable Long id,
+
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    description = "Новый email пользователя",
+                    required = true,
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(
+                                    description = "Объект пользователя с новым email",
+                                    requiredProperties = {"email"},
+                                    example = """
+                        {
+                          "email": "newemail@example.com"
+                        }
+                        """
+                            )
+                    )
+            )
+            @RequestBody User user
+    ) {
+        if (!user.getEmail().isEmpty()) {
             var u = userService.updateUser(id, user.getEmail());
-            if(u != null) {
+            if (u != null) {
                 return ResponseEntity.ok(new UserDTO(u));
             }
         }
@@ -162,45 +302,147 @@ public class UserController {
     }
 
     // DELETE /api/users/{id} - удалить пользователя
-    // // curl -X DELETE http://localhost:8080/api/users/2
+    // curl -X DELETE http://localhost:8080/api/users/2
+    @Operation(
+            summary = "Удалить пользователя",
+            description = "Удаляет пользователя по указанному ID"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Пользователь успешно удален"
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Пользователь не найден"
+            )
+    })
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteUser(
+            @Parameter(description = "ID пользователя", required = true, example = "1")
+            @PathVariable Long id
+    ) {
         userService.deleteUserById(id);
         return ResponseEntity.ok().build();
     }
 
     // GET /api/users/{id}/accounts
     // curl http://127.0.0.1:8080/api/users/1/accounts
+    @Operation(
+            summary = "Получить счета пользователя",
+            description = "Возвращает список всех счетов указанного пользователя"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Список счетов успешно получен",
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(implementation = AccountDTO.class))
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Пользователь не найден"
+            )
+    })
     @GetMapping("/{id}/accounts")
-    public ResponseEntity<List<AccountDTO>> getUserAccounts(@PathVariable Long id) {
+    public ResponseEntity<List<AccountDTO>> getUserAccounts(
+            @Parameter(description = "ID пользователя", required = true, example = "1")
+            @PathVariable Long id
+    ) {
         var accounts = userService.getAccounts(id);
         var list = accounts.values()
-                           .stream()
-                           .map(AccountDTO::new)
-                           .toList();
+                .stream()
+                .map(AccountDTO::new)
+                .toList();
         return ResponseEntity.ok(list);
     }
 
     // PUT /api/users/{id}/accounts/{id_acc}/name
-    // curl -X PUT http://127.0.0.1:8080/api/users/1/accounts/1/name -H "Content-Type: application/json"  -d "Основной расчётный счёт"
+    // curl -X PUT http://127.0.0.1:8080/api/users/1/accounts/1/name -H "Content-Type: application/json" -d "Основной расчётный счёт"
+    @Operation(
+            summary = "Изменить название счета",
+            description = "Изменяет название указанного счета пользователя"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Название счета успешно изменено"
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Некорректное название"
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Пользователь или счет не найден"
+            )
+    })
     @PutMapping("/{id}/accounts/{id_acc}/name")
-    public ResponseEntity<Boolean> setAccountName(@PathVariable("id") Long id,
-                                                  @PathVariable("id_acc")  Long id_acc,
-                                                  @RequestBody String name) {
-        var res = accountService.setAccountName(id,id_acc,name);
+    public ResponseEntity<Boolean> setAccountName(
+            @Parameter(description = "ID пользователя", required = true, example = "1")
+            @PathVariable("id") Long id,
+
+            @Parameter(description = "ID счета", required = true, example = "1")
+            @PathVariable("id_acc") Long id_acc,
+
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    description = "Новое название счета",
+                    required = true,
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(
+                                    description = "Название счета в формате строки JSON",
+                                    example = "\"Основной расчётный счёт\""
+                            )
+                    )
+            )
+            @RequestBody String name
+    ) {
+        var res = accountService.setAccountName(id, id_acc, name);
         return ResponseEntity.ok(res);
     }
 
     // POST /api/users/{id}/accounts
-    // curl -X POST http://localhost:8080/api/users/1/accounts   -H "Content-Type: application/json"  -d 'Брокерский счёт 1'
-    @Operation(summary = "Создать новый счет для пользователя")
+    // curl -X POST http://localhost:8080/api/users/1/accounts -H "Content-Type: application/json" -d 'Брокерский счёт 1'
+    @Operation(
+            summary = "Создать новый счет для пользователя",
+            description = "Создает новый счет с указанным названием для пользователя"
+    )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Счет успешно создан"),
-            @ApiResponse(responseCode = "404", description = "Пользователь не найден")
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Счет успешно создан",
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(implementation = AccountDTO.class))
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Некорректное название счета"
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Пользователь не найден"
+            )
     })
     @PostMapping("/{id}/accounts")
-    public ResponseEntity<AccountDTO> createUserAccount(@PathVariable Long id, @RequestBody String name) {
-        var account =  accountService.create(id, name);
+    public ResponseEntity<AccountDTO> createUserAccount(
+            @Parameter(description = "ID пользователя", required = true, example = "1")
+            @PathVariable Long id,
+
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    description = "Название нового счета",
+                    required = true,
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(
+                                    description = "Название счета в формате строки JSON",
+                                    example = "\"Брокерский счёт 1\""
+                            )
+                    )
+            )
+            @RequestBody String name
+    ) {
+        var account = accountService.create(id, name);
         return ResponseEntity.ok(new AccountDTO(account));
     }
 }

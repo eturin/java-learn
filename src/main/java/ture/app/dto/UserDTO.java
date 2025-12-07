@@ -1,5 +1,6 @@
 package ture.app.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import ture.app.entity.User;
 
 import java.time.LocalDateTime;
@@ -7,7 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class UserDTO {
     private Long id;
     private String name;
