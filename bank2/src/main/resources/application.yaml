@@ -1,0 +1,39 @@
+spring:
+  application:
+    name: bank
+
+  # JPA properties
+  jpa:
+    database-platform: "org.hibernate.dialect.PostgreSQLDialect"
+    show-sql: true
+    hibernate:
+      ddl-auto: none
+    properties:
+      hibernate:
+        format_sql: true
+
+  # Database
+  datasource:
+    url: "jdbc:postgresql://localhost:5432/bank"
+    username: "postgres"
+    password: "postgres"
+
+    # Optional: connection pool
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+  
+  # Flyway properties
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+# JWT Configuration
+jwt:
+  secret: "mySuperSecretKeyThatIsAtLeast32CharactersLong12345"
+  expiration: 86400000 # 24 hours in milliseconds
+  issuer: "ture.bank"
+
+# Security (optional)
+security:
+  require-ssl: false
