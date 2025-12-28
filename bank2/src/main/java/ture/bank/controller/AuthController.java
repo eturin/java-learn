@@ -1,7 +1,5 @@
 package ture.bank.controller;
 
-
-
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -22,6 +20,14 @@ import ture.bank.repository.UserRepository;
 import ture.bank.util.PasswordHasher;
 
 import java.util.Optional;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 /**
  * Контроллер для операций аутентификации и управления JWT токенами.
@@ -49,6 +55,7 @@ import java.util.Optional;
  */
 @RestController
 @RequestMapping("/api/auth")
+@Tag(name = "Аутентификация", description = "Операции аутентификации и управления JWT токенами")
 public class AuthController {
 
     /**
@@ -144,8 +151,39 @@ public class AuthController {
      * @see AuthResponse
      * @see PasswordHasher#checkPassword(String, String)
      */
+    @Operation(
+            summary = "Аутентификация пользователя",
+            description = """
+                    Аутентификация пользователя по логину и паролю.
+                    При успешной аутентификации возвращает JWT токен.
+                    
+                    ### Тестовые учетные данные:
+                    - **admin** / admin123 (роль: ADMIN)
+                    """
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Успешная аутентификация",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = AuthResponse.class)
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Неверный логин или пароль",
+                    content = @Content(mediaType = "text/plain")
+            )
+    })
     @PostMapping("/login")
-    public ResponseEntity<?> authenticateUser(@Valid @RequestBody AuthRequest authRequest) {
+    public ResponseEntity<?> authenticateUser(
+            @Parameter(
+                    description = "Данные для аутентификации",
+                    required = true,
+                    schema = @Schema(implementation = AuthRequest.class)
+            )
+            @Valid @RequestBody AuthRequest authRequest) {
         // 1. Поиск пользователя в базе данных по логину
         Optional<User> userOptional = userRepository.findByLogin(authRequest.getLogin());
         if (userOptional.isEmpty()) {
@@ -237,8 +275,30 @@ public class AuthController {
      * @see JwtService#validateToken(String, UserDetails)
      * @see JwtService#extractUsername(String)
      */
+    @Operation(
+            summary = "Проверка валидности JWT токена",
+            description = "Проверяет, является ли предоставленный JWT токен валидным"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Токен действителен",
+                    content = @Content(mediaType = "text/plain")
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Токен недействителен или произошла ошибка валидации",
+                    content = @Content(mediaType = "text/plain")
+            )
+    })
     @PostMapping("/validate")
-    public ResponseEntity<?> validateToken(@RequestBody String token) {
+    public ResponseEntity<?> validateToken(
+            @Parameter(
+                    description = "JWT токен для проверки",
+                    required = true,
+                    schema = @Schema(type = "string", example = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
+            )
+            @RequestBody String token) {
         try {
             // 1. Извлекаем имя пользователя из токена
             String username = jwtService.extractUsername(token);

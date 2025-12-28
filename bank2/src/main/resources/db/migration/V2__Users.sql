@@ -30,6 +30,7 @@ RETURN NEW;
 END;
 $$ language 'plpgsql';
 
+
 CREATE TRIGGER update_users_updated_at
     BEFORE UPDATE ON users
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -38,5 +39,5 @@ CREATE TRIGGER update_users_updated_at
 -- Добавляем администатора
 -- Пароль: admin123
 INSERT INTO users (login, role_id, pwd_hash)
-VALUES ('admin', (select id from roles where name = 'ADMIN' limit 1), '$2a$10$N9qo8uLOickgx2ZMRZoMyeaj6vWj8.9.3Z1Q9P5Qw2Yz5h6G8vQO')
+VALUES ('admin', (select id from roles where name = 'ADMIN' limit 1), '$2a$10$LQ6HJXiR5xjAvJ/ZSlDZq.nYQsV3HLxWtaTBvuzBnsLmYZ3MF07iG')
     ON CONFLICT (login) DO nothing;

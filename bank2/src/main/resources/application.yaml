@@ -37,3 +37,21 @@ jwt:
 # Security (optional)
 security:
   require-ssl: false
+
+# Swagger/OpenAPI Configuration
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+    display-request-duration: true
+    defaultModelsExpandDepth: 2
+    defaultModelExpandDepth: 2
+    doc-expansion: none
+  packages-to-scan: ture.bank.controller
+  paths-to-match: /api/**
+  show-actuator: false
+  cache:
+    disabled: true
