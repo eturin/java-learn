@@ -66,6 +66,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private UserDetailsService userDetailsService;
 
     /**
+     * Имя cookie для JWT токена.
+     */
+    public static final String JWT_COOKIE_NAME = "jwt_token";
+
+    /**
      * Основной метод фильтра, который обрабатывает каждый HTTP запрос.
      * <p><strong>Алгоритм работы:</strong>
      * <ol>
@@ -115,24 +120,23 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     FilterChain filterChain)
             throws ServletException, IOException {
 
-        // Получаем заголовок Authorization из запроса
-        final String authHeader = request.getHeader("Authorization");
-        final String jwt;
-        final String username;
+        String jwt = extractToken(request);
 
-        // Проверяем наличие и формат заголовка Authorization
-        if (!StringUtils.hasText(authHeader) || !authHeader.startsWith("Bearer ")) {
-            // Если токена нет или формат некорректный, пропускаем запрос дальше
-            // Spring Security обработает его как анонимный запрос
+        if (jwt == null) {
+            // Если токена нет ни в заголовке, ни в куках, пропускаем запрос дальше
             filterChain.doFilter(request, response);
             return;
         }
 
-        // Извлекаем JWT токен (убираем "Bearer " префикс)
-        jwt = authHeader.substring(7);
-
-        // Извлекаем имя пользователя из токена
-        username = jwtService.extractUsername(jwt);
+        final String username;
+        try {
+            // Извлекаем имя пользователя из токена
+            username = jwtService.extractUsername(jwt);
+        } catch (Exception e) {
+            // Если не удалось извлечь username, пропускаем запрос
+            filterChain.doFilter(request, response);
+            return;
+        }
 
         // Если имя пользователя извлечено и пользователь еще не аутентифицирован в текущем контексте
         if (StringUtils.hasText(username) && SecurityContextHolder.getContext().getAuthentication() == null) {
@@ -206,7 +210,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         jakarta.servlet.http.Cookie[] cookies = request.getCookies();
         if (cookies != null) {
             for (jakarta.servlet.http.Cookie cookie : cookies) {
-                if ("jwt_token".equals(cookie.getName())) {
+                if (JWT_COOKIE_NAME.equals(cookie.getName())) {
                     return cookie.getValue();
                 }
             }
