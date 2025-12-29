@@ -78,7 +78,7 @@ public class JwtProperties {
     }
 
     /**
-     * Получает время жизни JWT токена.
+     * Получает время жизни JWT токена в миллисекундах
      *
      * @return long
      */
