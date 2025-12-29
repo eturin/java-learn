@@ -1,17 +1,24 @@
 package ture.bank.controller;
 
 import jakarta.validation.Valid;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import ture.bank.config.JwtProperties;
+import ture.bank.dto.ChangePasswordRequest;
+import ture.bank.security.JwtAuthenticationFilter;
+import ture.bank.security.SecurityConfig;
 import ture.bank.service.JwtService;
 import ture.bank.dto.AuthRequest;
 import ture.bank.dto.AuthResponse;
@@ -19,6 +26,8 @@ import ture.bank.entity.User;
 import ture.bank.repository.UserRepository;
 import ture.bank.util.PasswordHasher;
 
+import java.time.Duration;
+import java.util.Map;
 import java.util.Optional;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -36,7 +45,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
  *   <li>Аутентификации пользователей (логин) с получением JWT токена</li>
  *   <li>Валидации существующих JWT токенов</li>
  * </ul>
- * Все эндпоинты публичны и не требуют аутентификации для доступа.
  * </p>
  * <p><strong>Поток аутентификации:</strong>
  * <pre>
@@ -88,6 +96,12 @@ public class AuthController {
      */
     @Autowired
     private org.springframework.security.core.userdetails.UserDetailsService userDetailsService;
+
+    /**
+     * Конфигурационные свойства JWT.
+     */
+    @Autowired
+    private JwtProperties jwtProperties;
 
     /**
      * Аутентификация пользователя и выдача JWT токена.
@@ -183,7 +197,8 @@ public class AuthController {
                     required = true,
                     schema = @Schema(implementation = AuthRequest.class)
             )
-            @Valid @RequestBody AuthRequest authRequest) {
+            @Valid @RequestBody AuthRequest authRequest,
+            HttpServletResponse response) {
         // 1. Поиск пользователя в базе данных по логину
         Optional<User> userOptional = userRepository.findByLogin(authRequest.getLogin());
         if (userOptional.isEmpty()) {
@@ -223,8 +238,118 @@ public class AuthController {
         // 7. Получаем роль пользователя для включения в ответ
         String role = user.getRole().getName();
 
-        // 8. Возвращаем успешный ответ с токеном
+        // 8. Устанавливаем токен в HTTP-only cookie
+        setJwtCookie(response, jwt, Duration.ofMillis(jwtProperties.getExpiration()));
+
+        // 9. Возвращаем успешный ответ с токеном
         return ResponseEntity.ok(new AuthResponse(jwt, authRequest.getLogin(), role));
+    }
+
+    /**
+     * Обновление JWT токена.
+     * <p>Проверяет текущий токен из cookie и выдает новый токен
+     * без необходимости повторной аутентификации.</p>
+     *
+     * @param jwtToken текущий JWT токен из cookie
+     * @param response HTTP ответ для установки нового cookie
+     * @return ResponseEntity с результатом обновления
+     */
+    @Operation(
+            summary = "Обновление JWT токена",
+            description = "Обновляет JWT токен из cookie без повторной аутентификации"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Токен успешно обновлен",
+                    content = @Content(mediaType = "application/json")
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Не удалось обновить токен",
+                    content = @Content(mediaType = "text/plain")
+            )
+    })
+    @PostMapping("/refresh")
+    public ResponseEntity<?> refreshToken(
+            @CookieValue(name = JwtAuthenticationFilter.JWT_COOKIE_NAME, required = false) String jwtToken,
+            HttpServletResponse response) {
+        if (jwtToken == null || jwtToken.isEmpty()) {
+            return ResponseEntity.badRequest().body("Токен отсутствует в cookie");
+        }
+
+        try {
+            // 1. Извлекаем имя пользователя из токена
+            String username = jwtService.extractUsername(jwtToken);
+
+            // 2. Загружаем данные пользователя для проверки
+            UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+
+            // 3. Проверяем валидность текущего токена
+            if (jwtService.validateToken(jwtToken, userDetails)) {
+                // 4. Генерируем новый токен
+                String newJwt = jwtService.generateToken(username);
+
+                // 5. Устанавливаем новый токен в cookie
+                setJwtCookie(response, newJwt, Duration.ofMillis(jwtProperties.getExpiration()));
+
+                // 6. Возвращаем информацию об обновлении
+                return ResponseEntity.ok().body(Map.of(
+                        "success", true,
+                        "username", username,
+                        "message", "Токен успешно обновлен"
+                ));
+            } else {
+                return ResponseEntity.badRequest().body("Текущий токен недействителен");
+            }
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Ошибка обновления токена: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Выход из системы (logout).
+     * <p>Удаляет JWT токен из cookie, делая его недействительным.</p>
+     *
+     * @param response HTTP ответ для очистки cookie
+     * @return ResponseEntity с сообщением об успешном выходе
+     */
+    @Operation(
+            summary = "Выход из системы",
+            description = "Удаляет JWT токен из cookie, завершая сессию пользователя"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Успешный выход из системы",
+                    content = @Content(mediaType = "text/plain")
+            )
+    })
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout(HttpServletResponse response) {
+        // Удаляем cookie, устанавливая его с нулевым временем жизни
+        setJwtCookie(response, "", Duration.ofMillis(0));
+        return ResponseEntity.ok("Успешный выход из системы");
+    }
+
+    /**
+     * Устанавливает JWT токен в HTTP-only cookie.
+     *
+     * @param response HTTP ответ
+     * @param jwtToken JWT токен
+     */
+    private void setJwtCookie(HttpServletResponse response, String jwtToken, Duration age) {
+        // Создаем cookie с настройками безопасности
+        ResponseCookie cookie = ResponseCookie.from(JwtAuthenticationFilter.JWT_COOKIE_NAME, jwtToken)
+                .httpOnly(true)          // Защита от XSS атак
+                .secure(true)            // Только по HTTPS (в production)
+                .path("/")               // Доступно для всех путей
+                .maxAge(age)
+                .sameSite("Strict")      // Защита от CSRF атак
+                .build();
+
+        // Добавляем cookie в заголовки ответа
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }
 
     /**
@@ -317,156 +442,143 @@ public class AuthController {
             return ResponseEntity.badRequest().body("Ошибка валидации токена");
         }
     }
+
+    /**
+     * Смена пароля текущего пользователя.
+     * <p>Позволяет аутентифицированному пользователю изменить свой пароль.
+     * Для успешной смены пароля необходимо:
+     * <ul>
+     *   <li>Указать текущий (старый) пароль</li>
+     *   <li>Указать новый пароль (не менее 6 символов)</li>
+     *   <li>Подтвердить новый пароль</li>
+     *   <li>Новый пароль не должен совпадать со старым</li>
+     * </ul>
+     * </p>
+     *
+     * @param changePasswordRequest объект с данными для смены пароля
+     * @return ResponseEntity с результатом операции
+     *
+     * @example Пример успешной смены пароля
+     * <pre>{@code
+     * // Запрос:
+     * POST /api/auth/change-password
+     * Authorization: Bearer {jwt_token}
+     * Content-Type: application/json
+     *
+     * {
+     *   "oldPassword": "admin123",
+     *   "newPassword": "newAdmin123",
+     *   "confirmPassword": "newAdmin123"
+     * }
+     *
+     * // Ответ (200 OK):
+     * "Пароль успешно изменен"
+     * }</pre>
+     *
+     * @example Пример ошибок
+     * <pre>{@code
+     * // Неверный текущий пароль (400 Bad Request):
+     * "Неверный текущий пароль"
+     *
+     * // Новый пароль совпадает со старым (400 Bad Request):
+     * "Новый пароль не должен совпадать с текущим"
+     *
+     * // Пароли не совпадают (400 Bad Request):
+     * "Новый пароль и подтверждение не совпадают"
+     * }</pre>
+     *
+     * @see ChangePasswordRequest
+     * @see org.springframework.security.core.annotation.AuthenticationPrincipal
+     */
+    @Operation(
+            summary = "Смена пароля текущего пользователя",
+            description = """
+                    Позволяет аутентифицированному пользователю изменить свой пароль.
+                    
+                    ### Требования:
+                    - Должен быть аутентифицирован (JWT токен)
+                    - Текущий пароль должен быть верным
+                    - Новый пароль: не менее 6 символов
+                    - Новый пароль и подтверждение должны совпадать
+                    - Новый пароль не должен совпадать со старым
+                    """
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Пароль успешно изменен",
+                    content = @Content(mediaType = "text/plain")
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Ошибка валидации или неверные данные",
+                    content = @Content(mediaType = "text/plain")
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Пользователь не аутентифицирован",
+                    content = @Content(mediaType = "text/plain")
+            )
+    })
+    @PostMapping("/change-password")
+    public ResponseEntity<?> changePassword(
+            @Parameter(
+                    description = "Данные для смены пароля",
+                    required = true,
+                    schema = @Schema(implementation = ChangePasswordRequest.class)
+            )
+            @Valid @RequestBody ChangePasswordRequest changePasswordRequest,
+            Authentication authentication) {
+
+        /// Проверяем, аутентифицирован ли пользователь
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(401).body("Пользователь не аутентифицирован");
+        }
+
+        // Получаем имя пользователя из Authentication
+        String username = authentication.getName();
+
+        // Ищем пользователя в базе данных
+        Optional<User> userOptional = userRepository.findByLogin(username);
+        if (userOptional.isEmpty()) {
+            return ResponseEntity.badRequest().body("Пользователь не найден");
+        }
+
+        User user = userOptional.get();
+
+        // 1. Проверяем текущий пароль
+        if (!PasswordHasher.checkPassword(changePasswordRequest.getOldPassword(), user.getPasswordHash())) {
+            return ResponseEntity.badRequest().body("Неверный текущий пароль");
+        }
+
+        // 2. Проверяем, что новый пароль не совпадает со старым
+        if (changePasswordRequest.getOldPassword().equals(changePasswordRequest.getNewPassword())) {
+            return ResponseEntity.badRequest().body("Новый пароль не должен совпадать с текущим");
+        }
+
+        // 3. Проверяем, что новый пароль и подтверждение совпадают
+        if (!changePasswordRequest.getNewPassword().equals(changePasswordRequest.getConfirmPassword())) {
+            return ResponseEntity.badRequest().body("Новый пароль и подтверждение не совпадают");
+        }
+
+        // 4. Хешируем новый пароль
+        String newPasswordHash = PasswordHasher.hashPassword(changePasswordRequest.getNewPassword());
+
+        // 5. Обновляем пароль пользователя
+        user.setPasswordHash(newPasswordHash);
+        userRepository.save(user);
+
+        // 6. Возвращаем успешный ответ
+        return ResponseEntity.ok("Пароль успешно изменен");
+    }
 }
 
 // ============================================================================
 // ДОПОЛНИТЕЛЬНЫЕ ЭНДПОЙНТЫ И УЛУЧШЕНИЯ
 // ============================================================================
 
-/**
- * <h3>Пример расширенного AuthController с дополнительными эндпоинтами:</h3>
- * <pre>{@code
- * @PostMapping("/refresh")
- * public ResponseEntity<?> refreshToken(@RequestBody RefreshTokenRequest request) {
- *     // Реализация refresh токенов для продления сессии без перелогина
- *     String refreshToken = request.getRefreshToken();
- *
- *     if (jwtService.isRefreshTokenValid(refreshToken)) {
- *         String username = jwtService.extractUsernameFromRefreshToken(refreshToken);
- *         String newAccessToken = jwtService.generateToken(username);
- *
- *         return ResponseEntity.ok(new AuthResponse(newAccessToken, username));
- *     }
- *
- *     return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Невалидный refresh токен");
- * }
- *
- * @PostMapping("/logout")
- * public ResponseEntity<?> logout(@RequestHeader("Authorization") String authHeader) {
- *     // Реализация logout (добавление токена в blacklist)
- *     String token = authHeader.substring(7);
- *     tokenBlacklistService.blacklistToken(token);
- *
- *     return ResponseEntity.ok("Успешный выход из системы");
- * }
- *
- * @PostMapping("/change-password")
- * public ResponseEntity<?> changePassword(
- *         @AuthenticationPrincipal UserDetails userDetails,
- *         @Valid @RequestBody ChangePasswordRequest request) {
- *     // Смена пароля текущим пользователем
- *
- *     User user = userRepository.findByLogin(userDetails.getUsername())
- *             .orElseThrow(() -> new RuntimeException("Пользователь не найден"));
- *
- *     // Проверяем старый пароль
- *     if (!PasswordHasher.checkPassword(request.getOldPassword(), user.getPasswordHash())) {
- *         return ResponseEntity.badRequest().body("Неверный текущий пароль");
- *     }
- *
- *     // Хешируем и сохраняем новый пароль
- *     String newPasswordHash = PasswordHasher.hashPassword(request.getNewPassword());
- *     user.setPasswordHash(newPasswordHash);
- *     userRepository.save(user);
- *
- *     return ResponseEntity.ok("Пароль успешно изменен");
- * }
- * }</pre>
- */
 
-/**
- * <h3>Пример DTO для дополнительных операций:</h3>
- * <pre>{@code
- * // Для refresh токенов
- * public class RefreshTokenRequest {
- *     @NotBlank
- *     private String refreshToken;
- *
- *     // геттеры и сеттеры
- * }
- *
- * // Для смены пароля
- * public class ChangePasswordRequest {
- *     @NotBlank
- *     private String oldPassword;
- *
- *     @NotBlank
- *     @Size(min = 8, message = "Пароль должен быть не менее 8 символов")
- *     private String newPassword;
- *
- *     @NotBlank
- *     private String confirmPassword;
- *
- *     // геттеры и сеттеры + валидация совпадения newPassword и confirmPassword
- * }
- * }</pre>
- */
 
-/**
- * <h3>Рекомендации по безопасности для эндпоинтов аутентификации:</h3>
- * <ol>
- *   <li><strong>Rate Limiting:</strong> Ограничьте количество попыток входа (например, 5 попыток в минуту)
- *     <pre>{@code
- *     // Используйте Spring Security или отдельную библиотеку
- *     .antMatchers("/api/auth/login").access("@rateLimiter.canAccess(#request)")
- *     }</pre>
- *   </li>
- *
- *   <li><strong>Задержка при неудачных попытках:</strong> Добавьте небольшую задержку при неверных попытках входа</li>
- *
- *   <li><strong>Логирование:</strong> Логируйте все попытки входа (успешные и неуспешные) с IP адресом
- *     <pre>{@code
- *     logger.info("Успешный вход: {}, IP: {}", authRequest.getLogin(), request.getRemoteAddr());
- *     logger.warn("Неудачная попытка входа: {}, IP: {}", authRequest.getLogin(), request.getRemoteAddr());
- *     }</pre>
- *   </li>
- *
- *   <li><strong>Блокировка аккаунтов:</strong> Реализуйте временную блокировку после N неудачных попыток
- *     <pre>{@code
- *     if (user.getFailedLoginAttempts() >= 5) {
- *         user.setLockedUntil(Instant.now().plusMinutes(15));
- *         userRepository.save(user);
- *         return ResponseEntity.badRequest().body("Аккаунт временно заблокирован");
- *     }
- *     }</pre>
- *   </li>
- *
- *   <li><strong>HTTPS обязателен:</strong> Всегда используйте HTTPS в production</li>
- * </ol>
- */
-
-/**
- * <h3>Пример обработки исключений для улучшения UX:</h3>
- * <pre>{@code
- * @ExceptionHandler(BadCredentialsException.class)
- * public ResponseEntity<?> handleBadCredentials(BadCredentialsException ex) {
- *     // Можно возвращать разные сообщения для разных ситуаций
- *     return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
- *             .body(Map.of(
- *                 "error": "invalid_credentials",
- *                 "message": "Неверный логин или пароль"
- *             ));
- * }
- *
- * @ExceptionHandler(DisabledException.class)
- * public ResponseEntity<?> handleDisabledUser(DisabledException ex) {
- *     return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
- *             .body(Map.of(
- *                 "error": "account_disabled",
- *                 "message": "Аккаунт отключен. Обратитесь к администратору"
- *             ));
- * }
- *
- * @ExceptionHandler(LockedException.class)
- * public ResponseEntity<?> handleLockedAccount(LockedException ex) {
- *     return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
- *             .body(Map.of(
- *                 "error": "account_locked",
- *                 "message": "Аккаунт заблокирован. Попробуйте позже"
- *             ));
- * }
- * }</pre>
- */
 
 /**
  * <h3>Поток данных при аутентификации:</h3>
@@ -514,45 +626,3 @@ public class AuthController {
  * }</pre>
  */
 
-/**
- * <h3>Тестирование эндпоинтов аутентификации:</h3>
- * <pre>{@code
- * @SpringBootTest
- * @AutoConfigureMockMvc
- * class AuthControllerTest {
- *
- *     @Autowired
- *     private MockMvc mockMvc;
- *
- *     @Test
- *     void testLogin_Success() throws Exception {
- *         mockMvc.perform(post("/api/auth/login")
- *                 .contentType(MediaType.APPLICATION_JSON)
- *                 .content("{\"login\":\"admin\",\"password\":\"admin123\"}"))
- *                 .andExpect(status().isOk())
- *                 .andExpect(jsonPath("$.token").exists())
- *                 .andExpect(jsonPath("$.type").value("Bearer"));
- *     }
- *
- *     @Test
- *     void testLogin_InvalidCredentials() throws Exception {
- *         mockMvc.perform(post("/api/auth/login")
- *                 .contentType(MediaType.APPLICATION_JSON)
- *                 .content("{\"login\":\"admin\",\"password\":\"wrong\"}"))
- *                 .andExpect(status().isBadRequest());
- *     }
- *
- *     @Test
- *     void testValidateToken_Valid() throws Exception {
- *         // Получаем токен
- *         String token = ...;
- *
- *         mockMvc.perform(post("/api/auth/validate")
- *                 .contentType(MediaType.TEXT_PLAIN)
- *                 .content(token))
- *                 .andExpect(status().isOk())
- *                 .andExpect(content().string("Токен действителен"));
- *     }
- * }
- * }</pre>
- */
