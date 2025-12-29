@@ -18,7 +18,10 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import java.util.Arrays;
 /**
  * Основной класс конфигурации безопасности Spring Security.
  * <p>Этот класс настраивает всю систему безопасности приложения, включая:
@@ -143,6 +146,25 @@ public class SecurityConfig {
     }
 
     /**
+     * Настройка CORS для работы с cookie в браузере.
+     */
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000", "http://localhost:8080"));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With"));
+        configuration.setExposedHeaders(Arrays.asList("Authorization", "Set-Cookie"));
+        configuration.setAllowCredentials(true); // Важно для работы с cookie
+        configuration.setMaxAge(3600L);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
+    }
+
+
+    /**
      * Создает и настраивает цепочку фильтров безопасности.
      * <p>Это основной метод конфигурации Spring Security, который определяет:
      * <ul>
@@ -230,7 +252,12 @@ public class SecurityConfig {
                 // Настраиваем авторизацию запросов
                 .authorizeHttpRequests(auth -> auth
                         // Публичные эндпоинты (не требуют аутентификации)
-                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/auth/login").permitAll()
+                        .requestMatchers("/api/auth/validate").permitAll()
+                        .requestMatchers("/api/auth/refresh").permitAll()
+                        // Защищенные эндпоинты аутентификации
+                        .requestMatchers("/api/auth/change-password").authenticated()
+                        .requestMatchers("/api/auth/logout").authenticated()
 
                         // Документация API
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
@@ -259,28 +286,6 @@ public class SecurityConfig {
 // ДОПОЛНИТЕЛЬНАЯ КОНФИГУРАЦИЯ И ПРИМЕРЫ
 // ============================================================================
 
-/**
- * <h3>Расширенная конфигурация CORS (если нужна):</h3>
- * <pre>{@code
- * @Bean
- * public CorsConfigurationSource corsConfigurationSource() {
- *     CorsConfiguration configuration = new CorsConfiguration();
- *     configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000"));
- *     configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
- *     configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type"));
- *     configuration.setExposedHeaders(Arrays.asList("Authorization"));
- *     configuration.setAllowCredentials(true);
- *     configuration.setMaxAge(3600L);
- *
- *     UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
- *     source.registerCorsConfiguration("/**", configuration);
- *     return source;
- * }
- *
- * // Затем в securityFilterChain добавить:
- * .cors(cors -> cors.configurationSource(corsConfigurationSource()))
- * }</pre>
- */
 
 /**
  * <h3>Пример конфигурации для разных профилей:</h3>
