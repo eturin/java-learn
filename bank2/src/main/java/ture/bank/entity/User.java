@@ -42,7 +42,7 @@ public class User implements UserDetails {
      * Роль пользователя
      * @see Role
      */
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "role_id", nullable = false, foreignKey = @ForeignKey(name = "fk_users_role_id"))
     private Role role;
 
@@ -158,6 +158,10 @@ public class User implements UserDetails {
      */
     public String getPasswordHash() {
         return passwordHash;
+    }
+
+    public void setPasswordHash(String passwordHash) {
+        this.passwordHash = passwordHash;
     }
 
     /**
