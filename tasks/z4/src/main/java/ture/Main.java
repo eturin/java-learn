@@ -11,9 +11,10 @@ public class Main {
         return s.chars().allMatch(Character::isDigit);
     }
     public static boolean check2(String s) {
-        for (var ch : s.toCharArray()) {
-            if (!Character.isDigit(ch)) return false;
-        }
+        for (var i = 0; i < s.length(); ++i)
+            if (!Character.isDigit(s.charAt(i)))
+                return false;
+
         return true;
     }
 
