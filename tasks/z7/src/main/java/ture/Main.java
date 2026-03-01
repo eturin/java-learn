@@ -13,13 +13,13 @@ public class Main {
     static Numbers toNumbers(String str) {
         var s = str.trim();
         Integer n = null;
-        try { n = Integer.parseInt(s);   } catch (NumberFormatException e) {  }
+        try { n = Integer.valueOf(s);   } catch (NumberFormatException e) {  }
         Long l = null;
-        try { l = Long.parseLong(s);     } catch (NumberFormatException e) {  }
+        try { l = Long.valueOf(s);     } catch (NumberFormatException e) {  }
         Float f = null;
-        try { f = Float.parseFloat(s);   } catch (NumberFormatException e) {  }
+        try { f = Float.valueOf(s);   } catch (NumberFormatException e) {  }
         Double d = null;
-        try { d = Double.parseDouble(s); } catch (NumberFormatException e) {  }
+        try { d = Double.valueOf(s); } catch (NumberFormatException e) {  }
 
         return new Numbers(n, l, f, d);
     }
