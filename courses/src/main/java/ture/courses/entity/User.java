@@ -14,7 +14,6 @@ import java.time.LocalDateTime;
        schema = "usr",
        indexes = {
                @Index(name = "idx_users_email", columnList = "email", unique = true),
-               @Index(name = "idx_users_role_id", columnList = "role_id"),
                @Index(name = "idx_users_name", columnList = "name", unique = true),
                @Index(name = "idx_users_full_name", columnList = "full_name", unique = true)
        }
